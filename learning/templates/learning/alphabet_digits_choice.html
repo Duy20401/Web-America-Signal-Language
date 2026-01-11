@@ -1,0 +1,76 @@
+{% extends 'learning/base.html' %}
+
+{% block title %}Học Chữ Cái và Chữ Số - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col text-center">
+            <h3 class="fw-bold mb-2">Học Chữ Cái và Chữ Số ASL</h3>
+            <p class="text-muted" style="font-size: 0.9rem;">Chọn nội dung bạn muốn học</p>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center g-4">
+        <!-- Học Chữ Cái -->
+        <div class="col-md-5 col-lg-4">
+            <a href="{% url 'learn_letters' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm hover-card">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-font fa-4x text-primary"></i>
+                        </div>
+                        <h4 class="card-title fw-bold mb-3">Học Chữ Cái</h4>
+                        <p class="card-text text-muted">
+                            Học 26 chữ cái tiếng Anh từ A đến Z bằng ngôn ngữ ký hiệu ASL
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-primary">A-Z</span>
+                            <span class="badge bg-info text-dark">26 chữ cái</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Học Chữ Số -->
+        <div class="col-md-5 col-lg-4">
+            <a href="{% url 'learn_digits' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm hover-card">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-hashtag fa-4x text-success"></i>
+                        </div>
+                        <h4 class="card-title fw-bold mb-3">Học Chữ Số</h4>
+                        <p class="card-text text-muted">
+                            Học các chữ số từ 0 đến 9 bằng ngôn ngữ ký hiệu ASL
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-success">0-9</span>
+                            <span class="badge bg-info text-dark">10 chữ số</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col text-center">
+            <a href="{% url 'practice_camera' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-camera me-1"></i>Luyện Tập Với Camera
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+}
+</style>
+{% endblock %}

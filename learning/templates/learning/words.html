@@ -1,0 +1,162 @@
+{% extends 'learning/base.html' %}
+
+{% block title %}Học Từ Vựng - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-3">
+        <div class="col text-center">
+            <h3 class="fw-bold mb-2">Học Từ Vựng ASL</h3>
+            <p class="text-muted" style="font-size: 0.9rem;">Lướt qua các ảnh để học từ vựng</p>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <!-- Vocabulary card container -->
+            <div id="vocab-card-container" class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </div>
+
+            <!-- Navigation buttons -->
+            <div class="d-flex justify-content-between mt-3" id="nav-buttons" style="display:none!important;">
+                <button id="btn-prev" class="btn btn-outline-secondary" disabled>
+                    <i class="fas fa-arrow-left me-1"></i>Trước
+                </button>
+                <button id="btn-skip" class="btn btn-warning">
+                    <i class="fas fa-forward me-1"></i>Skip
+                </button>
+                <button id="btn-next" class="btn btn-primary">
+                    Tiếp <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </div>
+
+            <!-- Progress indicator -->
+            <div class="text-center mt-3 text-muted small" id="progress-text"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let vocabData = [];
+let currentIndex = 0;
+let currentImageIndex = 0;
+
+fetch('/api/vocabulary/')
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) {
+      document.getElementById('vocab-card-container').innerHTML = 
+        '<div class="alert alert-danger">Lỗi: ' + (data.error || 'Không tải được dữ liệu') + '</div>';
+      return;
+    }
+    vocabData = data.items || [];
+    if (vocabData.length === 0) {
+      document.getElementById('vocab-card-container').innerHTML = 
+        '<div class="alert alert-info">Chưa có dữ liệu từ vựng</div>';
+      return;
+    }
+    document.getElementById('nav-buttons').style.display = 'flex';
+    renderCard();
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById('vocab-card-container').innerHTML = 
+      '<div class="alert alert-danger">Không thể kết nối</div>';
+  });
+
+function renderCard() {
+  if (vocabData.length === 0) return;
+  const item = vocabData[currentIndex];
+  const images = item.images || [];
+  currentImageIndex = Math.min(currentImageIndex, images.length - 1);
+
+  const container = document.getElementById('vocab-card-container');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'card shadow-sm';
+  card.style.maxWidth = '100%';
+
+  const imgWrap = document.createElement('div');
+  imgWrap.style.position = 'relative';
+  imgWrap.style.paddingTop = '100%'; // square aspect ratio
+  imgWrap.style.overflow = 'hidden';
+  imgWrap.style.backgroundColor = '#f8f9fa';
+
+  const img = document.createElement('img');
+  img.className = 'img-fluid';
+  img.style.position = 'absolute';
+  img.style.top = '0';
+  img.style.left = '0';
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.objectFit = 'contain';
+  img.src = images[currentImageIndex] || '';
+  img.alt = 'Vocabulary image';
+
+  imgWrap.appendChild(img);
+  card.appendChild(imgWrap);
+
+  // Image navigation dots if multiple images
+  if (images.length > 1) {
+    const dotsContainer = document.createElement('div');
+    dotsContainer.className = 'd-flex justify-content-center gap-2 mt-2 mb-2';
+    images.forEach((url, idx) => {
+      const dot = document.createElement('button');
+      dot.className = 'btn btn-sm rounded-circle';
+      dot.style.width = '12px';
+      dot.style.height = '12px';
+      dot.style.padding = '0';
+      dot.style.backgroundColor = idx === currentImageIndex ? '#0d6efd' : '#dee2e6';
+      dot.addEventListener('click', () => {
+        currentImageIndex = idx;
+        renderCard();
+      });
+      dotsContainer.appendChild(dot);
+    });
+    card.appendChild(dotsContainer);
+  }
+
+  container.appendChild(card);
+
+  // Update buttons
+  document.getElementById('btn-prev').disabled = currentIndex === 0;
+  document.getElementById('btn-next').disabled = currentIndex === vocabData.length - 1;
+
+  // Update progress
+  document.getElementById('progress-text').textContent = 
+    `Từ ${currentIndex + 1} / ${vocabData.length}`;
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentIndex > 0) {
+    currentIndex--;
+    currentImageIndex = 0;
+    renderCard();
+  }
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (currentIndex < vocabData.length - 1) {
+    currentIndex++;
+    currentImageIndex = 0;
+    renderCard();
+  }
+});
+
+document.getElementById('btn-skip').addEventListener('click', () => {
+  if (currentIndex < vocabData.length - 1) {
+    currentIndex++;
+    currentImageIndex = 0;
+    renderCard();
+  } else {
+    alert('Đã đến từ cuối cùng!');
+  }
+});
+</script>
+{% endblock %}

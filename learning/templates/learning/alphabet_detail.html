@@ -1,0 +1,33 @@
+{% extends 'learning/base.html' %}
+
+{% block title %}Chữ {{ letter.letter }} - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-6">
+            <h1 class="fw-bold display-4 mb-4">Chữ {{ letter.letter }}</h1>
+            
+            {% if letter.image %}
+            <div class="mb-4">
+                <img src="{{ letter.image.url }}" alt="Ký hiệu chữ {{ letter.letter }}" class="img-fluid rounded shadow">
+            </div>
+            {% endif %}
+            
+            <div class="mb-4">
+                <h3 class="fw-bold">Hướng Dẫn</h3>
+                <p>{{ letter.description }}</p>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a href="{% url 'learn_alphabet' %}" class="btn btn-outline-primary me-md-2">
+                    ← Quay Lại
+                </a>
+                <a href="{% url 'practice_camera' %}" class="btn btn-primary">
+                    📷 Luyện Tập Ngay
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

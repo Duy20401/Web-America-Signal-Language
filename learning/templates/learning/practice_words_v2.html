@@ -1,0 +1,657 @@
+{% extends 'learning/base.html' %}
+{% load static %}
+
+{% block title %}Luyện Tập Từ Vựng ASL{% endblock %}
+
+{% block content %}
+<div class="practice-words-container">
+    <div class="container py-3">
+        <!-- Header -->
+        <div class="text-center mb-3">
+            <h3 class="fw-bold text-dark mb-1">
+                <i class="fas fa-hands text-primary me-2"></i>LUYỆN TẬP TỪ VỰNG ASL
+            </h3>
+            <p class="text-muted small mb-2">Chọn từ → Xem video hướng dẫn → Thực hành với camera</p>
+            {% if model_ready %}
+            <span class="badge bg-success px-3 py-1"><i class="fas fa-check-circle me-1"></i>AI Sẵn sàng</span>
+            {% else %}
+            <span class="badge bg-warning px-3 py-1"><i class="fas fa-exclamation-triangle me-1"></i>Chế độ mô phỏng</span>
+            {% endif %}
+        </div>
+        
+        <div class="row g-3">
+            <!-- Left: Word List -->
+            <div class="col-lg-2 col-md-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0 small"><i class="fas fa-list me-1"></i>DANH SÁCH TỪ</h6>
+                    </div>
+                    <div class="card-body p-0 word-list-body">
+                        <div id="word-list" class="list-group list-group-flush">
+                            <div class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <p class="small text-muted mt-2 mb-0">Đang tải...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light py-2 text-center border-0">
+                        <small class="text-muted fw-medium" id="word-count">0 từ</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center: Video Guide -->
+            <div class="col-lg-5 col-md-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-success text-white py-2">
+                        <h6 class="mb-0 small"><i class="fas fa-video me-1"></i>VIDEO HƯỚNG DẪN</h6>
+                    </div>
+                    <div class="card-body p-3 d-flex flex-column justify-content-center align-items-center video-guide-body">
+                        <div id="video-container" class="w-100 text-center">
+                            <div class="text-muted py-5">
+                                <i class="fas fa-hand-point-left fa-3x mb-3 text-secondary opacity-50"></i>
+                                <p class="mb-1">Chọn một từ từ danh sách bên trái</p>
+                                <p class="small text-muted">để xem video hướng dẫn cách thực hiện</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light py-2 text-center border-0">
+                        <span id="selected-word" class="badge bg-secondary px-3 py-2">Chưa chọn từ</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Camera + Recognition -->
+            <div class="col-lg-5 col-md-5">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 small"><i class="fas fa-camera me-1"></i>CAMERA THỰC HÀNH</h6>
+                        <div class="btn-group btn-group-sm">
+                            <button id="btn-camera" class="btn btn-light btn-sm px-3">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button id="btn-reset" class="btn btn-warning btn-sm px-3">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <!-- Camera View -->
+                        <div class="d-flex justify-content-center">
+                            <div class="position-relative camera-view mb-2">
+                                <video id="video" autoplay playsinline class="rounded"></video>
+                                <canvas id="canvas" style="display:none;"></canvas>
+                            
+                            <!-- Success indicator -->
+                            <div id="success-indicator" class="success-overlay">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            
+                                <!-- Camera placeholder -->
+                                <div id="camera-placeholder" class="camera-placeholder">
+                                    <i class="fas fa-video-slash fa-2x mb-2 opacity-50"></i>
+                                    <p class="mb-0 small">Nhấn <strong>▶</strong> để bật camera</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="progress-section mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Thu thập dữ liệu</small>
+                                <small id="progress-text" class="text-muted fw-medium">0/15 frame</small>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                                     style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recognition Result -->
+                        <div class="result-section">
+                            <div class="result-card">
+                                <div class="row align-items-center g-2">
+                                    <div class="col-5 text-center">
+                                        <div id="prediction-result" class="prediction-text">--</div>
+                                        <div id="confidence-text" class="confidence-label">Độ tin cậy: 0%</div>
+                                    </div>
+                                    <div class="col-7">
+                                        <div class="confidence-bar-wrapper">
+                                            <div id="confidence-bar" class="confidence-bar-fill"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Speech buttons -->
+                                <div class="text-center mt-3 pt-2 border-top">
+                                    <button id="btn-speak" class="btn btn-sm btn-outline-primary px-3" disabled>
+                                        <i class="fas fa-volume-up me-1"></i>Phát âm
+                                    </button>
+                                    <button id="btn-auto-speak" class="btn btn-sm btn-outline-secondary px-3 ms-2">
+                                        <i class="fas fa-bell me-1"></i>Tự động: <span id="auto-speak-status">TẮT</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back button -->
+        <div class="text-center mt-4">
+            <a href="{% url 'practice' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.practice-words-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    min-height: calc(100vh - 60px);
+}
+
+/* Word List */
+.word-list-body {
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.word-list-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.word-list-body::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+}
+
+#word-list .list-group-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.15s ease;
+}
+
+#word-list .list-group-item:hover:not(.active-word) {
+    background: #f8f9fa;
+    padding-left: 1rem;
+}
+
+#word-list .list-group-item.active-word {
+    background: linear-gradient(90deg, #0d6efd, #0b5ed7);
+    color: white;
+    border-color: transparent;
+}
+
+/* Video Guide */
+.video-guide-body {
+    min-height: 300px;
+}
+
+#video-container video {
+    max-height: 280px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Camera Section */
+.camera-view {
+    background: #1a1a2e;
+    border-radius: 8px;
+    overflow: hidden;
+    width: 320px;
+    height: 240px;
+}
+
+.camera-view video {
+    width: 320px;
+    height: 240px;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.camera-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #6c757d;
+    background: #1a1a2e;
+}
+
+.camera-placeholder.hidden {
+    display: none;
+}
+
+.success-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+
+.success-overlay i {
+    font-size: 60px;
+    color: #28a745;
+    text-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
+    animation: successPulse 0.5s ease;
+}
+
+@keyframes successPulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Progress Section */
+.progress-section {
+    padding: 0 0.5rem;
+}
+
+/* Result Section */
+.result-section {
+    padding: 0 0.5rem;
+}
+
+.result-card {
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid #ffc107;
+}
+
+.prediction-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0d6efd;
+    line-height: 1.2;
+}
+
+.confidence-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.confidence-bar-wrapper {
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.confidence-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffc107, #28a745);
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+/* Buttons */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Animation */
+.pulse {
+    animation: pulse 0.4s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .word-list-body {
+        max-height: 40vh;
+    }
+    .video-guide-body {
+        min-height: 250px;
+    }
+    .camera-view {
+        max-height: 220px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// State
+let wordData = [];
+let selectedWord = null;
+let cameraStream = null;
+let recognitionInterval = null;
+let cameraActive = false;
+let autoSpeak = false;
+const speechSynth = window.speechSynthesis;
+
+// CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// State for recognition stopping
+let recognitionComplete = false;
+const REQUIRED_FRAMES = 15;
+
+// Load word list từ Firebase
+async function loadWordList() {
+    try {
+        const response = await fetch('/api/words/');
+        const data = await response.json();
+        
+        if (data.success && data.items) {
+            wordData = data.items.map((item, idx) => ({
+                id: idx,
+                word: item.word,
+                video_url: item.video_url
+            }));
+            
+            wordData.sort((a, b) => a.word.localeCompare(b.word));
+            
+            console.log(`📺 Loaded ${wordData.length} words from Firebase`);
+            renderWordList();
+            document.getElementById('word-count').textContent = `${wordData.length} từ`;
+        } else {
+            throw new Error(data.error || 'Không thể tải dữ liệu');
+        }
+        
+    } catch (err) {
+        console.error('Load words error:', err);
+        document.getElementById('word-list').innerHTML = 
+            '<div class="p-3 text-danger small text-center">Lỗi kết nối</div>';
+    }
+}
+
+function renderWordList() {
+    const container = document.getElementById('word-list');
+    if (wordData.length === 0) {
+        container.innerHTML = '<div class="p-3 text-muted small text-center">Chưa có từ vựng</div>';
+        return;
+    }
+    
+    container.innerHTML = wordData.map((item, idx) => `
+        <a href="#" class="list-group-item list-group-item-action" 
+           data-idx="${idx}" onclick="selectWord(${idx}); return false;">
+            <span>${item.word}</span>
+            ${item.video_url ? '<i class="fas fa-video text-success float-end opacity-75" style="font-size:0.7rem;"></i>' : ''}
+        </a>
+    `).join('');
+}
+
+function selectWord(idx) {
+    if (idx < 0 || idx >= wordData.length) return;
+    
+    document.querySelectorAll('#word-list .list-group-item').forEach(el => {
+        el.classList.remove('active-word');
+    });
+    document.querySelector(`#word-list .list-group-item[data-idx="${idx}"]`)?.classList.add('active-word');
+    
+    selectedWord = wordData[idx];
+    const selectedBadge = document.getElementById('selected-word');
+    selectedBadge.textContent = selectedWord.word;
+    selectedBadge.className = 'badge bg-primary px-3 py-2';
+    
+    const videoUrl = selectedWord.video_url;
+    const videoContainer = document.getElementById('video-container');
+    
+    if (videoUrl) {
+        videoContainer.innerHTML = `
+            <video controls class="w-100" autoplay loop muted>
+                <source src="${videoUrl}" type="video/mp4">
+            </video>
+        `;
+    } else {
+        videoContainer.innerHTML = `
+            <div class="text-muted py-4">
+                <i class="fas fa-video-slash fa-2x mb-2 opacity-50"></i>
+                <p class="mb-0 small">Chưa có video cho từ này</p>
+            </div>
+        `;
+    }
+    
+    resetRecognition();
+}
+
+// Camera controls
+document.getElementById('btn-camera').addEventListener('click', async () => {
+    if (!cameraActive) {
+        await startCamera();
+    } else {
+        stopCamera();
+    }
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+    resetRecognition();
+});
+
+async function startCamera() {
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480 } 
+        });
+        document.getElementById('video').srcObject = cameraStream;
+        document.getElementById('camera-placeholder').classList.add('hidden');
+        cameraActive = true;
+        
+        const btn = document.getElementById('btn-camera');
+        btn.innerHTML = '<i class="fas fa-stop"></i>';
+        btn.classList.remove('btn-light');
+        btn.classList.add('btn-danger');
+        
+        startRecognition();
+    } catch (err) {
+        console.error('Camera error:', err);
+        alert('Không thể truy cập camera: ' + err.message);
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    if (recognitionInterval) {
+        clearInterval(recognitionInterval);
+        recognitionInterval = null;
+    }
+    cameraActive = false;
+    
+    const btn = document.getElementById('btn-camera');
+    btn.innerHTML = '<i class="fas fa-play"></i>';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-light');
+    
+    document.getElementById('video').srcObject = null;
+    document.getElementById('camera-placeholder').classList.remove('hidden');
+}
+
+function startRecognition() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    recognitionComplete = false;
+    let isProcessing = false; // Tránh gọi request chồng chéo
+    
+    recognitionInterval = setInterval(async () => {
+        // Dừng nếu camera tắt, đã hoàn thành, hoặc đang xử lý request trước
+        if (!cameraActive || recognitionComplete || isProcessing) return;
+        
+        // Kiểm tra video đã ready chưa
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            console.log('⏳ Video chưa ready...');
+            return;
+        }
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        
+        isProcessing = true; // Đánh dấu đang xử lý
+        
+        try {
+            const formData = new FormData();
+            formData.append('image', imageData);
+            
+            const response = await fetch('/api/recognize/words/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            });
+            
+            const data = await response.json();
+            console.log('📊 Response:', data.buffer_status?.current_size, '/', REQUIRED_FRAMES, 'type:', data.result_type);
+            
+            updateRecognitionUI(data);
+            
+            if (data.buffer_status && data.buffer_status.current_size >= REQUIRED_FRAMES) {
+                if (data.result_type === 'PREDICTION' || data.result_type === 'LOW_CONFIDENCE') {
+                    recognitionComplete = true;
+                    showRecognitionComplete(data);
+                }
+            }
+            
+        } catch (err) {
+            console.error('Recognition error:', err);
+        } finally {
+            isProcessing = false; // Cho phép request tiếp theo
+        }
+    }, 300); // Giảm interval xuống 300ms để thu nhanh hơn
+}
+
+function showRecognitionComplete(data) {
+    document.getElementById('progress-bar').classList.remove('bg-info', 'progress-bar-animated');
+    document.getElementById('progress-bar').classList.add('bg-success');
+    document.getElementById('progress-text').innerHTML = `<i class="fas fa-check"></i> Hoàn thành`;
+    
+    const btnReset = document.getElementById('btn-reset');
+    btnReset.classList.remove('btn-warning');
+    btnReset.classList.add('btn-success');
+}
+
+function updateRecognitionUI(data) {
+    if (data.buffer_status) {
+        const progress = data.buffer_status.progress_percent || 0;
+        const current = data.buffer_status.current_size || 0;
+        const required = data.buffer_status.required_size || 15;
+        
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+        document.getElementById('progress-text').textContent = `${current}/${required} frame`;
+    }
+    
+    const predResult = document.getElementById('prediction-result');
+    const confBar = document.getElementById('confidence-bar');
+    const confText = document.getElementById('confidence-text');
+    const speakBtn = document.getElementById('btn-speak');
+    
+    if (data.success && data.prediction) {
+        const prediction = data.prediction;
+        const confidence = data.confidence || 0;
+        
+        predResult.textContent = prediction;
+        predResult.classList.add('pulse');
+        setTimeout(() => predResult.classList.remove('pulse'), 400);
+        
+        confBar.style.width = `${confidence}%`;
+        confText.textContent = `Độ tin cậy: ${confidence.toFixed(1)}%`;
+        
+        if (!prediction.includes('thu thập') && !prediction.includes('--')) {
+            speakBtn.disabled = false;
+        }
+        
+        // Check match - hiện success indicator khi đúng
+        if (selectedWord && confidence > 50) {
+            const isMatch = prediction.toLowerCase() === selectedWord.word.toLowerCase();
+            if (isMatch) {
+                showSuccess();
+                if (autoSpeak) speakWord(prediction);
+            }
+        }
+    }
+}
+
+function resetRecognition() {
+    recognitionComplete = false;
+    
+    fetch('/api/recognize/words/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: new URLSearchParams({ reset: 'true' })
+    });
+    
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-bar').classList.remove('bg-success');
+    document.getElementById('progress-bar').classList.add('bg-info', 'progress-bar-animated');
+    document.getElementById('progress-text').textContent = '0/15 frame';
+    document.getElementById('prediction-result').textContent = '--';
+    document.getElementById('confidence-bar').style.width = '0%';
+    document.getElementById('confidence-text').textContent = 'Độ tin cậy: 0%';
+    document.getElementById('btn-speak').disabled = true;
+    document.getElementById('btn-speak').disabled = true;
+    
+    const btnReset = document.getElementById('btn-reset');
+    btnReset.classList.remove('btn-success');
+    btnReset.classList.add('btn-warning');
+}
+
+function showSuccess() {
+    const indicator = document.getElementById('success-indicator');
+    indicator.style.display = 'block';
+    setTimeout(() => indicator.style.display = 'none', 1500);
+}
+
+// Speech
+document.getElementById('btn-speak').addEventListener('click', () => {
+    const prediction = document.getElementById('prediction-result').textContent;
+    if (prediction && prediction !== '--') speakWord(prediction);
+});
+
+document.getElementById('btn-auto-speak').addEventListener('click', () => {
+    autoSpeak = !autoSpeak;
+    const btn = document.getElementById('btn-auto-speak');
+    document.getElementById('auto-speak-status').textContent = autoSpeak ? 'BẬT' : 'TẮT';
+    btn.classList.toggle('btn-info', autoSpeak);
+    btn.classList.toggle('btn-outline-secondary', !autoSpeak);
+});
+
+function speakWord(word) {
+    if (speechSynth.speaking) speechSynth.cancel();
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;
+    speechSynth.speak(utterance);
+}
+
+// Initialize
+loadWordList();
+</script>
+{% endblock %}

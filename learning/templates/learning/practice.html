@@ -1,0 +1,138 @@
+{% extends 'learning/base.html' %}
+{% load static %}
+
+{% block title %}Luyện Tập - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 min-vh-100 bg-gray-gradient">
+    <div class="container" style="max-width: 1200px;">
+        <div class="row justify-content-center text-center mb-3">
+            <div class="col-12">
+                <h1 class="h3 fw-bold mb-2 text-dark">LUYỆN TẬP ASL</h1>
+                <p class="lead mb-2 text-muted" style="font-size: 0.95rem;">Chọn phương thức luyện tập và bắt đầu học ngay</p>
+            </div>
+        </div>
+        
+        <div class="row g-3 justify-content-center">
+            <!-- Camera Recognition -->
+            <div class="col-xl-5 col-lg-6 d-flex">
+                <div class="card h-100 border-0 shadow-lg transition-all w-100">
+                    <div class="card-body text-center p-3 d-flex flex-column">
+                        <div class="text-primary mb-2 flex-shrink-0">
+                            <i class="fas fa-camera fa-3x"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2 text-dark flex-shrink-0">NHẬN DIỆN KÝ TỰ</h5>
+                        <p class="mb-2 text-muted flex-grow-1" style="font-size: 0.9rem;">AI nhận diện ký hiệu tay + Phát âm tự động</p>
+                        
+                        <div class="features-list text-start mb-2 flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-check-circle text-success me-2" style="font-size: 0.85rem;"></i>
+                                <span class="text-dark" style="font-size: 0.85rem;">Nhận diện 26 ký hiệu ASL</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-check-circle text-success me-2" style="font-size: 0.85rem;"></i>
+                                <span class="text-dark" style="font-size: 0.85rem;">Phát âm tự động khi nhận diện</span>
+                            </div>
+                        </div>
+                        
+                        <a href="{% url 'practice_camera' %}" class="btn btn-primary btn-sm w-100 py-2 fw-bold mt-auto" style="font-size: 0.95rem;">
+                            <i class="fas fa-play me-2"></i>BẮT ĐẦU NHẬN DIỆN
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Word Recognition Card -->
+            <div class="col-xl-5 col-lg-6 d-flex">
+                <div class="card h-100 border-0 shadow-lg transition-all w-100">
+                    <div class="card-body text-center p-3 d-flex flex-column">
+                        <div class="text-success mb-2 flex-shrink-0">
+                            <i class="fas fa-comments fa-3x"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2 text-dark flex-shrink-0">NHẬN DIỆN TỪ VỰNG</h5>
+                        <p class="mb-2 text-muted flex-grow-1" style="font-size: 0.9rem;">AI nhận diện từ vựng ASL với sliding window</p>
+                        
+                        <div class="features-list text-start mb-2 flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-check-circle text-success me-2" style="font-size: 0.85rem;"></i>
+                                <span class="text-dark" style="font-size: 0.85rem;">Nhận diện từ vựng ASL</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-check-circle text-success me-2" style="font-size: 0.85rem;"></i>
+                                <span class="text-dark" style="font-size: 0.85rem;">Video hướng dẫn từ Firebase</span>
+                            </div>
+                        </div>
+                        
+                        <a href="{% url 'practice_words_camera' %}" class="btn btn-success btn-sm w-100 py-2 fw-bold mt-auto" style="font-size: 0.95rem;">
+                            <i class="fas fa-play me-2"></i>BẮT ĐẦU NHẬN DIỆN
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Tips -->
+        <div class="row justify-content-center mt-3">
+            <div class="col-lg-10">
+                <div class="card border-0 shadow bg-light">
+                    <div class="card-body p-3">
+                        <h6 class="text-center fw-bold mb-2 text-dark">
+                            <i class="fas fa-lightbulb me-1 text-warning"></i>MẸO LUYỆN TẬP HIỆU QUẢ
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Thực hành trước gương
+                                    </li>
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Bắt đầu với chữ cái đơn giản
+                                    </li>
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Luyện tập 15-20 phút/ngày
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Đảm bảo ánh sáng đủ
+                                    </li>
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Giữ tay ổn định
+                                    </li>
+                                    <li class="mb-1 text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle text-success me-1" style="font-size: 0.75rem;"></i>
+                                        Kiên nhẫn và thực hành thường xuyên
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.transition-all {
+    transition: all 0.3s ease;
+}
+.transition-all:hover {
+    transform: translateY(-5px);
+}
+.learning-option {
+    transition: all 0.3s ease;
+}
+.learning-option:hover {
+    transform: translateX(5px);
+    background: rgba(108, 117, 125, 0.1) !important;
+}
+</style>
+{% endblock %}

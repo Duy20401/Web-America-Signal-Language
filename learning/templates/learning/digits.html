@@ -1,0 +1,329 @@
+{% extends 'learning/base.html' %}
+
+{% block title %}Học Chữ Số - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="row mb-3">
+        <div class="col text-center">
+            <h3 class="fw-bold mb-2">Học Chữ Số ASL</h3>
+            <p class="text-muted" style="font-size: 0.9rem;">Học các chữ số từ 0 đến 9</p>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="row">
+                <!-- Left: Reference Image -->
+                <div class="col-md-6 mb-3">
+                    <div id="digit-card-container" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right: Camera Feed -->
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-lg rounded-3" style="height: 468px; overflow: hidden;">
+                        <div class="card-body p-0 position-relative" style="height: 400px;">
+                            <video id="video" autoplay playsinline class="w-100 h-100" style="object-fit: cover; background: #000; transform: scaleX(-1);"></video>
+                            <canvas id="canvas" style="display:none;"></canvas>
+                            
+                            <!-- Success indicator -->
+                            <div id="success-indicator" class="position-absolute top-50 start-50 translate-middle" style="display:none;">
+                                <i class="fas fa-check-circle text-success" style="font-size: 100px; opacity: 0.9;"></i>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center bg-white" style="height: 68px;">
+                            <button id="btn-camera" class="btn btn-primary btn-sm">
+                                <i class="fas fa-camera me-1"></i>Bật Camera
+                            </button>
+                            <div id="camera-status" class="text-muted small mt-2">Camera chưa bật</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation buttons -->
+            <div class="d-flex justify-content-between mt-3" id="nav-buttons" style="display:none!important;">
+                <button id="btn-prev" class="btn btn-outline-secondary" disabled>
+                    <i class="fas fa-arrow-left me-1"></i>Trước
+                </button>
+                <button id="btn-skip" class="btn btn-warning">
+                    <i class="fas fa-forward me-1"></i>Skip
+                </button>
+            </div>
+
+            <!-- Progress indicator -->
+            <div class="text-center mt-3 text-muted small" id="progress-text"></div>
+
+            <div class="text-center mt-3 gap-2 d-flex justify-content-center">
+                <a href="{% url 'learn_alphabet' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Quay lại
+                </a>
+                <a href="{% url 'practice_camera' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-camera me-1"></i>Luyện Tập Với Camera
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let digitData = [];
+let currentIndex = 0;
+
+fetch('/api/digits/')
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) {
+      document.getElementById('digit-card-container').innerHTML = 
+        '<div class="alert alert-danger">Lỗi: ' + (data.error || 'Không tải được dữ liệu') + '</div>';
+      return;
+    }
+    digitData = data.items || [];
+    if (digitData.length === 0) {
+      document.getElementById('digit-card-container').innerHTML = 
+        '<div class="alert alert-info">Chưa có dữ liệu chữ số</div>';
+      return;
+    }
+    
+    document.getElementById('nav-buttons').style.display = 'flex';
+    renderCard();
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById('digit-card-container').innerHTML = 
+      '<div class="alert alert-danger">Lỗi kết nối</div>';
+  });
+
+let cameraStream = null;
+let recognitionInterval = null;
+let cameraActive = false;
+let correctCount = 0;
+const CORRECT_THRESHOLD = 1; // Need 1 correct prediction to advance
+
+// Speech synthesis
+const speechSynth = window.speechSynthesis;
+let isSpeaking = false;
+let hasSpokenForCurrentCard = false; // Flag to speak only once per card
+
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+function speakDigit(digit) {
+  if (isSpeaking) {
+    speechSynth.cancel();
+  }
+  
+  const utterance = new SpeechSynthesisUtterance(digit);
+  utterance.rate = 0.8;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  
+  // Try Vietnamese voice
+  const vietnameseVoice = speechSynth.getVoices().find(voice => 
+    voice.lang.includes('vi') || voice.lang.includes('VN')
+  );
+  if (vietnameseVoice) {
+    utterance.voice = vietnameseVoice;
+    utterance.lang = 'vi-VN';
+  } else {
+    utterance.lang = 'en-US';
+  }
+  
+  utterance.onstart = () => {
+    isSpeaking = true;
+    document.getElementById('camera-status').textContent = `Đang phát âm: ${digit}`;
+  };
+  
+  utterance.onend = () => {
+    isSpeaking = false;
+    document.getElementById('camera-status').textContent = `Đã phát âm xong: ${digit}`;
+    // Advance after speech ends
+    advanceToNext();
+  };
+  
+  speechSynth.speak(utterance);
+}
+
+function advanceToNext() {
+  setTimeout(() => {
+    if (currentIndex < digitData.length - 1) {
+      currentIndex++;
+      renderCard();
+      console.log('Advanced to next digit after speech and delay');
+    } else {
+      document.getElementById('camera-status').textContent = 'Đã hoàn thành tất cả chữ số! 🎉';
+    }
+  }, 3000); // 3 second delay
+}
+
+function renderCard() {
+  if (digitData.length === 0) return;
+  
+  const item = digitData[currentIndex];
+  const container = document.getElementById('digit-card-container');
+  correctCount = 0; // Reset count on new card
+  hasSpokenForCurrentCard = false; // Reset speech flag
+  
+  container.innerHTML = `
+    <div class="card shadow-lg rounded-3" style="height: 468px; overflow: hidden;">
+      <div class="card-body p-3 d-flex align-items-center justify-content-center" style="height: 400px; background: #f8f9fa;">
+        <img src="${item.url}" class="img-fluid" alt="${item.name}" 
+             style="max-height: 100%; max-width: 100%; object-fit: contain;">
+      </div>
+      <div class="card-footer text-center bg-white" style="height: 68px; display: flex; align-items: center; justify-content: center;">
+        <h3 class="mb-0 fw-bold">${item.name}</h3>
+      </div>
+    </div>
+  `;
+  
+  // Update buttons
+  document.getElementById('btn-prev').disabled = currentIndex === 0;
+  
+  // Update progress
+  document.getElementById('progress-text').textContent = 
+    `Chữ số ${currentIndex + 1}/${digitData.length}`;
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderCard();
+  }
+});
+
+document.getElementById('btn-skip').addEventListener('click', () => {
+  if (currentIndex < digitData.length - 1) {
+    currentIndex++;
+    renderCard();
+  } else {
+    currentIndex = 0;
+    renderCard();
+  }
+});
+
+// Camera controls
+document.getElementById('btn-camera').addEventListener('click', async () => {
+  if (!cameraActive) {
+    await startCamera();
+  } else {
+    stopCamera();
+  }
+});
+
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: 640, height: 480 } 
+    });
+    document.getElementById('video').srcObject = cameraStream;
+    cameraActive = true;
+    document.getElementById('btn-camera').innerHTML = '<i class="fas fa-stop me-1"></i>Tắt Camera';
+    document.getElementById('camera-status').textContent = 'Camera đang hoạt động';
+    
+    // Start recognition
+    startRecognition();
+  } catch (err) {
+    console.error('Camera error:', err);
+    document.getElementById('camera-status').textContent = 'Lỗi: Không thể truy cập camera';
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  if (recognitionInterval) {
+    clearInterval(recognitionInterval);
+    recognitionInterval = null;
+  }
+  cameraActive = false;
+  document.getElementById('btn-camera').innerHTML = '<i class="fas fa-camera me-1"></i>Bật Camera';
+  document.getElementById('camera-status').textContent = 'Camera đã tắt';
+  document.getElementById('video').srcObject = null;
+}
+
+function startRecognition() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  recognitionInterval = setInterval(async () => {
+    if (!cameraActive || digitData.length === 0) return;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    const targetDigit = digitData[currentIndex].name;
+    
+    try {
+      // Use digit recognition model only
+      const response = await fetch('/api/recognize/', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ image: imageData, mode: 'numbers' })
+      });
+      
+      const data = await response.json();
+      console.log('Recognition response:', data);
+      if (data && data.hand_detected === false) {
+        document.getElementById('camera-status').textContent = 'Không phát hiện bàn tay';
+        return;
+      }
+      if (data.success && data.prediction) {
+        const predicted = String(data.prediction).trim();
+        const target = String(targetDigit).trim();
+        console.log(`Comparing: "${predicted}" === "${target}" => ${predicted === target}`);
+        document.getElementById('camera-status').textContent = `Nhận diện: ${predicted} (Cần: ${target})`;
+        
+        if (predicted === target && data.confidence >= 0.3 && !hasSpokenForCurrentCard) {
+          console.log('✅ MATCH with confidence! Speaking once and then advancing...');
+          hasSpokenForCurrentCard = true;
+          showSuccess();
+          speakDigit(target);
+        } else if (predicted === target && data.confidence >= 0.3 && hasSpokenForCurrentCard) {
+          console.log('✅ Already spoken for digit, waiting for advance...');
+        } else {
+          console.log('❌ No match or low confidence');
+        }
+      }
+    } catch (err) {
+      console.error('Recognition error:', err);
+    }
+  }, 1000);
+}
+
+function showSuccess() {
+  const indicator = document.getElementById('success-indicator');
+  indicator.style.display = 'block';
+  setTimeout(() => {
+    indicator.style.display = 'none';
+  }, 1500);
+}
+</script>
+{% endblock %}

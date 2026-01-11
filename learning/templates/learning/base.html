@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ASL Learning{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Load static files -->
+    {% load static %}
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'learning/css/style.css' %}">
+    
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 18px;
+            background-color: #f8f9fa; /* Màu nền xám */
+        }
+        
+        .display-1 { font-size: 4.5rem; font-weight: 800; }
+        .display-2 { font-size: 4rem; font-weight: 800; }
+        .display-3 { font-size: 3.5rem; font-weight: 700; }
+        .display-4 { font-size: 3rem; font-weight: 700; }
+        
+        h1 { font-size: 2.8rem; font-weight: 700; }
+        h2 { font-size: 2.4rem; font-weight: 600; }
+        h3 { font-size: 2rem; font-weight: 600; }
+        h4 { font-size: 1.8rem; font-weight: 600; }
+        h5 { font-size: 1.6rem; font-weight: 600; }
+        
+        .lead { font-size: 1.4rem; }
+        .btn { font-size: 1.2rem; font-weight: 600; }
+        
+        .card-title { font-size: 1.6rem; font-weight: 700; }
+        .card-text { font-size: 1.2rem; }
+        
+        .navbar-brand { font-size: 2rem; }
+        .nav-link { font-size: 1.3rem; }
+        
+        .container-fluid { padding: 0; }
+        .min-vh-100 { min-height: 100vh; }
+        
+        /* Chỉ đổi background chính thành xám */
+        .bg-gray-background {
+            background-color: #f8f9fa !important;
+        }
+        
+        .bg-light-gray {
+            background-color: #e9ecef !important;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column bg-gray-background">
+    <!-- Navigation - GIỮ NGUYÊN MÀU BAN ĐẦU -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top py-1">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{% url 'home' %}" style="font-size: 1.1rem;">
+                <i class="fas fa-hands me-1" style="font-size: 0.9rem;"></i>ASL Learning
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item mx-1">
+                        <a class="nav-link" href="{% url 'home' %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                            <i class="fas fa-home me-1" style="font-size: 0.8rem;"></i>Trang Chủ
+                        </a>
+                    </li>
+                    <li class="nav-item mx-1">
+                        <a class="nav-link" href="{% url 'learn_alphabet' %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                            <i class="fas fa-font me-1" style="font-size: 0.8rem;"></i>Chữ Cái
+                        </a>
+                    </li>
+                    <li class="nav-item mx-1">
+                        <a class="nav-link" href="{% url 'learn_words' %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                            <i class="fas fa-book me-1" style="font-size: 0.8rem;"></i>Từ Vựng
+                        </a>
+                    </li>
+                    <li class="nav-item mx-1">
+                        <a class="nav-link active" href="{% url 'practice' %}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                            <i class="fas fa-camera me-1" style="font-size: 0.8rem;"></i>Luyện Tập
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer - GIỮ NGUYÊN MÀU BAN ĐẦU -->
+    <footer class="bg-dark text-white py-2 mt-auto">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <h6 class="fw-bold mb-1">
+                        <i class="fas fa-hands me-1" style="font-size: 0.9rem;"></i>ASL Learning
+                    </h6>
+                    <p class="mb-0" style="font-size: 0.75rem;">Học ngôn ngữ ký hiệu ASL dễ dàng và hiệu quả</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-2 mt-md-0">
+                    <p class="mb-0" style="font-size: 0.75rem;">&copy; 2025 ASL Learning. Tất cả các quyền được bảo lưu.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

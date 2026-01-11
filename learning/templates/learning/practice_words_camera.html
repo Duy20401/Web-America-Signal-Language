@@ -1,0 +1,283 @@
+{% extends 'learning/base.html' %}
+{% load static %}
+
+{% block title %}Nhận Diện Từ Vựng - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 min-vh-100 bg-gray-background">
+    <div class="container" style="max-width: 1400px;">
+        <div class="row justify-content-center text-center mb-3">
+            <div class="col-12">
+                <h1 class="h2 fw-bold mb-2 text-dark">NHẬN DIỆN TỪ VỰNG ASL</h1>
+                <p class="lead fs-6 text-muted mb-2">AI nhận diện từ + Phát âm tự động</p>
+                
+                {% if model_ready %}
+                <div class="alert alert-success d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span><strong>AI ĐÃ SẴN SÀNG!</strong> Hỗ trợ từ vựng ASL + Text-to-Speech</span>
+                </div>
+                {% else %}
+                <div class="alert alert-warning d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span><strong>ĐANG DÙNG MÔ PHỎNG</strong> AI model chưa sẵn sàng</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row g-3">
+            <!-- Camera Section -->
+            <div class="col-lg-8">
+                <div class="card h-100 border-0 shadow-lg">
+                    <div class="card-header text-white py-2 bg-success text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-camera me-1"></i>WEBCAM NHẬN DIỆN
+                            {% if model_ready %}
+                            <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">AI ĐANG HOẠT ĐỘNG</span>
+                            {% else %}
+                            <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">CHẾ ĐỘ MÔ PHỎNG</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <!-- Camera Feed -->
+                        <div class="text-center mb-2">
+                            <div class="camera-frame position-relative d-inline-block" style="max-width: 100%;">
+                                <video id="video" width="420" height="315" autoplay class="rounded shadow" style="transform: scaleX(-1); max-width: 100%; height: auto;"></video>
+                                <canvas id="canvas" style="display: none; transform: scaleX(-1);"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Control Buttons -->
+                        <div class="text-center mb-2">
+                            <button id="start-btn" class="btn btn-success btn-sm me-2 px-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-play me-1"></i>BẮT ĐẦU
+                            </button>
+                            <button id="stop-btn" class="btn btn-danger btn-sm px-3" style="font-size: 0.85rem;" disabled>
+                                <i class="fas fa-stop me-1"></i>DỪNG LẠI
+                            </button>
+                            <button id="reset-btn" class="btn btn-warning btn-sm ms-2 px-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-redo me-1"></i>RESET
+                            </button>
+                        </div>
+
+                        <!-- Collection Progress -->
+                        <div class="text-center mb-2 p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-database me-1 text-info"></i>
+                                TIẾN TRÌNH THU THẬP
+                            </h6>
+                            <div class="collection-container">
+                                <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.75rem;">
+                                    <span>ĐANG THU THẬP DỮ LIỆU</span>
+                                    <span id="progress-text">0/15 frame</span>
+                                </div>
+                                <div class="progress" style="height: 18px;">
+                                    <div id="buffer-status" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        <span id="progress-percent" class="fw-bold" style="font-size: 0.75rem;">0%</span>
+                                    </div>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted" id="collection-info" style="font-size: 0.7rem;">
+                                        Hệ thống đang thu thập dữ liệu cử chỉ tay...
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Speech Controls -->
+                        <div class="text-center mb-2 p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-volume-up me-1 text-success" style="font-size: 0.9rem;"></i>
+                                PHÁT ÂM
+                            </h6>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button id="speak-btn" class="btn btn-info btn-sm px-3" style="font-size: 0.8rem;" disabled>
+                                    <i class="fas fa-play-circle me-1"></i>ĐỌC
+                                </button>
+                                <button id="toggle-speech-btn" class="btn btn-outline-info btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-bell me-1"></i>TỰ ĐỘNG: 
+                                    <span id="speech-status" class="badge bg-secondary ms-1" style="font-size: 0.7rem;">TẮT</span>
+                                </button>
+                                <button id="test-speech-btn" class="btn btn-warning btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-test-tube me-1"></i>KIỂM TRA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="col-lg-4">
+                <!-- Recognition Results -->
+                <div class="card border-0 shadow-lg mb-3">
+                    <div class="card-header text-white py-2 bg-warning text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar me-1"></i>KẾT QUẢ NHẬN DIỆN
+                        </h6>
+                    </div>
+                    <div class="card-body p-2 text-center">
+                        <div id="prediction-result" class="fw-bold text-primary mb-2" style="font-size: 2.5rem;">--</div>
+                        <div id="confidence" class="text-muted mb-2" style="font-size: 0.85rem;">Dộ tin cậy: 0%</div>
+                        
+                        <div class="confidence-container mb-2">
+                            <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.7rem;">
+                                <span>0%</span>
+                                <span>TIN CẬY</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="confidence-meter bg-light rounded-pill">
+                                <div id="confidence-bar" class="confidence-fill rounded-pill" style="width: 0%; height: 15px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="status" class="text-muted" style="font-size: 0.85rem;">
+                            <i class="fas fa-circle text-primary me-1"></i>CHƯA BẮT ĐẦU
+                        </div>
+
+                        <!-- Recognition Info -->
+                        <div class="mt-2 p-1 bg-light rounded">
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                <i class="fas fa-history me-1"></i>
+                                <strong>Trạng thái:</strong> 
+                                <span id="recognition-state">Chờ dữ liệu</span>
+                            </small>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                <i class="fas fa-bolt me-1"></i>
+                                <strong>Tốc độ:</strong> 1.25 frame/giây
+                            </small>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                <i class="fas fa-clock me-1"></i>
+                                <strong>Thời gian xử lý:</strong> 
+                                <span id="processing-time">0.0s</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+
+                <!-- Usage Guide -->
+                <div class="card border-0 shadow-lg mt-3">
+                    <div class="card-header text-white py-2 bg-secondary text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-1"></i>HƯỚNG DẪN SỬ DỤNG
+                        </h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="alert alert-info mb-2 py-2">
+                            <h6 class="alert-heading mb-1" style="font-size: 0.85rem;">💡 Tại sao cần thu thập dữ liệu?</h6>
+                            <p class="mb-0" style="font-size: 0.75rem;">Nhận diện từ vựng ASL cần phân tích <strong>chuỗi cử chỉ tay</strong> qua thời gian. Hệ thống cần thu thập 15 frame liên tiếp để có đủ thông tin nhận diện từ.</p>
+                        </div>
+                        
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 0.8rem;">📝 Cách sử dụng hiệu quả:</h6>
+                        <ul class="list-unstyled" style="font-size: 0.75rem;">
+                            <li class="mb-1">✅ <strong>Giữ tay ổn định</strong> trong khung hình</li>
+                            <li class="mb-1">✅ <strong>Thực hiện cử chỉ liên tục</strong> cho đến khi đủ frame</li>
+                            <li class="mb-1">✅ <strong>Chờ thanh tiến trình màu xanh</strong> trước khi đổi cử chỉ</li>
+                            <li class="mb-1">✅ <strong>Ánh sáng đủ</strong> giúp nhận diện chính xác hơn</li>
+                            <li class="mb-1">✅ <strong>Nhấn RESET</strong> để bắt đầu cử chỉ mới</li>
+                        </ul>
+                        
+                        <div class="mt-2 p-1 bg-light rounded">
+                            <small class="text-muted" style="font-size: 0.7rem;">
+                                <i class="fas fa-clock me-1"></i>
+                                <strong>Thời gian thu thập:</strong> Khoảng 12 giây cho 15 frame
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .pulse-animation {
+        animation: pulse 0.5s ease-in-out;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { 
+            transform: scale(1); 
+        }
+        50% { 
+            transform: scale(1.05); 
+        }
+    }
+    
+    .confidence-fill {
+        transition: width 0.3s ease, background 0.3s ease;
+    }
+    
+    #prediction-result {
+        transition: all 0.3s ease;
+    }
+    
+    .camera-frame {
+        max-width: 100%;
+    }
+    
+    .camera-frame video {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .confidence-meter {
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        transition: width 0.3s ease, background 0.3s ease;
+        border-radius: 10px;
+    }
+
+    .progress-bar-animated {
+        animation: progress-bar-stripes 1s linear infinite;
+    }
+
+    @keyframes progress-bar-stripes {
+        0% { background-position: 1rem 0; }
+        100% { background-position: 0 0; }
+    }
+
+    .collection-container {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+    }
+
+    .bg-gray-background {
+        background-color: #f8f9fa;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .display-2 {
+            font-size: 2.5rem;
+        }
+        .lead {
+            font-size: 1.2rem;
+        }
+        .camera-frame video {
+            width: 100%;
+            height: auto;
+            max-width: 400px;
+        }
+        .btn-lg {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'learning/js/word_camera.js' %}"></script>
+{% endblock %}

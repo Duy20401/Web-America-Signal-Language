@@ -1,0 +1,482 @@
+{% extends 'learning/base.html' %}
+{% load static %}
+
+{% block title %}Nhận Diện Camera - ASL Learning{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 min-vh-100 bg-gray-background">
+    <div class="container" style="max-width: 1400px;">
+        <div class="row justify-content-center text-center mb-3">
+            <div class="col-12">
+                <h1 class="h2 fw-bold mb-2 text-dark">NHẬN DIỆN ASL VỚI CAMERA</h1>
+                <p class="lead fs-6 text-muted mb-2">AI nhận diện ký hiệu tay + Phát âm tự động + Chụp ảnh</p>
+                
+                {% if asl_ready and digit_ready %}
+                <div class="alert alert-success d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span><strong>AI ĐÃ SẴN SÀNG!</strong> Hỗ trợ 26 chữ cái + 10 chữ số + Text-to-Speech</span>
+                </div>
+                {% elif digit_ready %}
+                <div class="alert alert-info d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span><strong>MỘT PHẦN SẴN SÀNG</strong> Chỉ hỗ trợ chữ số (0-9)</span>
+                </div>
+                {% elif asl_ready %}
+                <div class="alert alert-info d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span><strong>MỘT PHẦN SẴN SÀNG</strong> Chỉ hỗ trợ chữ cái (A-Z)</span>
+                </div>
+                {% else %}
+                <div class="alert alert-warning d-inline-flex align-items-center border-0 py-2 px-3" style="font-size: 0.85rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span><strong>ĐANG DÙNG MÔ PHỎNG</strong> AI model chưa sẵn sàng</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <!-- Camera Section -->
+            <div class="col-lg-8">
+                <div class="card h-100 border-0 shadow-lg">
+                    <div class="card-header text-white py-2 bg-primary text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-camera me-1"></i>WEBCAM NHẬN DIỆN
+                            {% if asl_ready or digit_ready %}
+                            <span class="badge bg-success ms-2" style="font-size: 0.7rem;">AI ĐANG HOẠT ĐỘNG</span>
+                            {% else %}
+                            <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">CHẾ ĐỘ MÔ PHỌNG</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <!-- Recognition Mode Selection -->
+                        <div class="text-center mb-2 p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-sliders-h me-1 text-primary" style="font-size: 0.9rem;"></i>
+                                CHẾ ĐỘ NHẬN DIỆN
+                            </h6>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button id="mode-all" class="btn btn-primary btn-sm px-3 recognition-mode active" data-mode="all" style="font-size: 0.8rem;">
+                                    <i class="fas fa-border-all me-1"></i>TẤT CẢ
+                                </button>
+                                <button id="mode-letters" class="btn btn-outline-primary btn-sm px-3 recognition-mode" data-mode="letters" style="font-size: 0.8rem;">
+                                    <i class="fas fa-font me-1"></i>CHỮ CÁI
+                                </button>
+                                <button id="mode-numbers" class="btn btn-outline-primary btn-sm px-3 recognition-mode" data-mode="numbers" style="font-size: 0.8rem;">
+                                    <i class="fas fa-hashtag me-1"></i>CHỮ SỐ
+                                </button>
+                            </div>
+                            <div class="mt-1">
+                                <small class="text-muted" id="current-mode-info" style="font-size: 0.75rem;">Đang nhận diện: Chữ cái (A-Z) + Chữ số (0-9)</small>
+                            </div>
+                        </div>
+
+                        <!-- Camera Feed -->
+                        <div class="text-center mb-2">
+                            <div class="camera-frame position-relative d-inline-block" style="max-width: 100%;">
+                                <video id="video" width="420" height="315" autoplay class="rounded shadow" style="transform: scaleX(-1); max-width: 100%; height: auto;"></video>
+                                <canvas id="canvas" style="display: none; transform: scaleX(-1);"></canvas>
+                                <!-- Canvas for captured image -->
+                                <canvas id="capture-canvas" style="display: none;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Control Buttons -->
+                        <div class="text-center mb-2">
+                            <button id="start-btn" class="btn btn-primary btn-sm me-2 px-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-play me-1"></i>BẮT ĐẦU
+                            </button>
+                            <button id="stop-btn" class="btn btn-danger btn-sm px-3" style="font-size: 0.85rem;" disabled>
+                                <i class="fas fa-stop me-1"></i>DỪNG LẠI
+                            </button>
+                            <button id="capture-btn" class="btn btn-success btn-sm ms-2 px-3" style="font-size: 0.85rem;" disabled>
+                                <i class="fas fa-camera me-1"></i>CHỤP ẢNH
+                            </button>
+                        </div>
+
+                        <!-- Speech Controls -->
+                        <div class="text-center mb-2 p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-volume-up me-1 text-primary" style="font-size: 0.9rem;"></i>
+                                PHÁT ÂM
+                            </h6>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button id="speak-btn" class="btn btn-info btn-sm px-3" style="font-size: 0.8rem;" disabled>
+                                    <i class="fas fa-play-circle me-1"></i>ĐỌC
+                                </button>
+                                <button id="toggle-speech-btn" class="btn btn-outline-info btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-bell me-1"></i>TỰ ĐỘNG: 
+                                    <span id="speech-status" class="badge bg-secondary ms-1" style="font-size: 0.7rem;">TẮT</span>
+                                </button>
+                                <button id="test-speech-btn" class="btn btn-warning btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-test-tube me-1"></i>KIỂM TRA
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Upload Image Section -->
+                        <div class="text-center mb-2 p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-cloud-upload-alt me-1 text-primary" style="font-size: 0.9rem;"></i>
+                                TẢI ẢNH LÊN
+                            </h6>
+                            <div class="upload-area mb-2" id="upload-area">
+                                <input type="file" id="upload-input" accept="image/*" style="display: none;">
+                                <div class="upload-placeholder" id="upload-placeholder">
+                                    <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
+                                    <p class="mb-2" style="font-size: 0.85rem;">Kéo thả ảnh vào đây hoặc</p>
+                                    <button id="browse-btn" class="btn btn-primary btn-sm" style="font-size: 0.8rem;">
+                                        <i class="fas fa-folder-open me-1"></i>CHỌN ẢNH
+                                    </button>
+                                    <p class="text-muted mt-1" style="font-size: 0.7rem;">JPG, PNG, JPEG</p>
+                                </div>
+                                <div class="upload-preview" id="upload-preview" style="display: none;">
+                                    <img id="upload-image" src="" alt="Ảnh tải lên" class="rounded shadow mb-2" style="max-width: 100%; max-height: 200px;">
+                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                        <button id="recognize-upload-btn" class="btn btn-success btn-sm px-3" style="font-size: 0.8rem;">
+                                            <i class="fas fa-search me-1"></i>NHẬN DIỆN
+                                        </button>
+                                        <button id="clear-upload-btn" class="btn btn-warning btn-sm px-3" style="font-size: 0.8rem;">
+                                            <i class="fas fa-times me-1"></i>XÓA
+                                        </button>
+                                        <button id="save-upload-btn" class="btn btn-info btn-sm px-3" style="font-size: 0.8rem;">
+                                            <i class="fas fa-save me-1"></i>LƯU
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="upload-status" class="text-muted mt-1" style="font-size: 0.75rem;">
+                                <i class="fas fa-info-circle me-1"></i>Sẵn sàng tải ảnh lên
+                            </div>
+                        </div>
+
+                        <!-- Capture Section -->
+                        <div class="text-center mb-2 p-2 bg-light rounded" id="capture-section" style="display: none;">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-image me-1 text-success" style="font-size: 0.9rem;"></i>
+                                ẢNH ĐÃ CHỤP
+                            </h6>
+                            <div class="captured-image-container mb-2">
+                                <img id="captured-image" src="" alt="Ảnh đã chụp" class="rounded shadow" style="max-width: 200px; display: none;">
+                            </div>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button id="recognize-capture-btn" class="btn btn-info btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-search me-1"></i>NHẬN DIỆN
+                                </button>
+                                <button id="retake-btn" class="btn btn-warning btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-redo me-1"></i>CHỤP LẠI
+                                </button>
+                                <button id="save-capture-btn" class="btn btn-success btn-sm px-3" style="font-size: 0.8rem;">
+                                    <i class="fas fa-save me-1"></i>LƯU
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Model Status -->
+                        <div class="text-center p-2 bg-light rounded">
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="fas fa-microchip me-1 text-primary" style="font-size: 0.9rem;"></i>
+                                TRẠNG THÁI MODEL
+                            </h6>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <span class="badge {% if asl_ready %}bg-success{% else %}bg-secondary{% endif %} py-1 px-2" style="font-size: 0.7rem;">
+                                    <i class="fas fa-font me-1"></i>
+                                    Chữ Cái: {% if asl_ready %}OK{% else %}CHƯA{% endif %}
+                                </span>
+                                <span class="badge {% if digit_ready %}bg-success{% else %}bg-secondary{% endif %} py-1 px-2" style="font-size: 0.7rem;">
+                                    <i class="fas fa-hashtag me-1"></i>
+                                    Chữ Số: {% if digit_ready %}OK{% else %}CHƯA{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="col-lg-4">
+                <!-- Real-time Recognition Results (ĐÃ DI CHUYỂN LÊN TRÊN PHẦN KÝ HIỆU HỖ TRỢ) -->
+                <div class="card border-0 shadow-lg mb-3">
+                    <div class="card-header text-white py-2 bg-success text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar me-1"></i>KẾT QUẢ NHẬN DIỆN THỜI GIAN THỰC
+                        </h6>
+                    </div>
+                    <div class="card-body p-2 text-center">
+                        <div id="prediction-result" class="fw-bold text-primary mb-2" style="font-size: 2.5rem;">--</div>
+                        <div id="confidence" class="text-muted mb-2" style="font-size: 0.85rem;">Dộ tin cậy: 0%</div>
+                        
+                        <div class="confidence-container mb-2">
+                            <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.7rem;">
+                                <span>0%</span>
+                                <span>TIN CẬY</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="confidence-meter bg-light rounded-pill">
+                                <div id="confidence-bar" class="confidence-fill rounded-pill" style="width: 0%; height: 15px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="status" class="text-muted" style="font-size: 0.85rem;">
+                            <i class="fas fa-circle text-primary me-1"></i>CHƯA BẮT ĐẦU
+                        </div>
+
+                        <!-- Mode Info -->
+                        <div class="mt-2 p-1 bg-light rounded">
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                <i class="fas fa-filter me-1"></i>
+                                <strong>Chế độ:</strong> 
+                                <span id="mode-display">Tất cả</span>
+                            </small>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                <i class="fas fa-bolt me-1"></i>
+                                <strong>Model:</strong> 
+                                <span id="model-display">Chữ cái + Chữ số</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supported Characters (ĐÃ DI CHUYỂN XUỐNG DƯỚI PHẦN KẾT QUẢ NHẬN DIỆN THỜI GIAN THỰC) -->
+                <div class="card border-0 shadow-lg mb-3">
+                    <div class="card-header text-white py-2 bg-warning">
+                        <h6 class="mb-0">
+                            <i class="fas fa-hands me-1"></i>KÝ HIỆU HỖ TRỢ
+                        </h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <!-- Letters -->
+                        <div class="mb-2 text-center">
+                            <p class="mb-2 fw-bold text-dark" style="font-size: 0.85rem;">
+                                <i class="fas fa-font me-1 text-primary"></i>
+                                26 chữ cái:
+                            </p>
+                            <div class="row g-2 mb-2">
+                                {% for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" %}
+                                <div class="col-3 col-sm-2 text-center">
+                                    <span class="badge bg-primary w-100 py-1 d-flex align-items-center justify-content-center" style="font-size: 0.8rem;">{{ letter }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Numbers -->
+                        <div class="text-center">
+                            <p class="mb-2 fw-bold text-dark" style="font-size: 0.85rem;">
+                                <i class="fas fa-hashtag me-1 text-info"></i>
+                                10 chữ số:
+                            </p>
+                            <div class="row g-2">
+                                {% for number in "0123456789" %}
+                                <div class="col-2 text-center">
+                                    <span class="badge bg-info w-100 py-1 d-flex align-items-center justify-content-center" style="font-size: 0.8rem;">{{ number }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Usage Tips -->
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <p class="fw-bold mb-1 text-dark text-center" style="font-size: 0.8rem;">
+                                <i class="fas fa-lightbulb me-1 text-warning"></i>
+                                HƯỚNG DẪN SỬ DỤNG:
+                            </p>
+                            <ul class="list-unstyled text-muted mb-0" style="font-size: 0.7rem;">
+                                <li><i class="fas fa-check text-success me-1"></i> <strong>Nhận diện thời gian thực:</strong> BẮT ĐẦU → thực hiện ký hiệu</li>
+                                <li><i class="fas fa-camera text-info me-1"></i> <strong>Chụp ảnh:</strong> CHỤP ẢNH → NHẬN DIỆN ẢNH</li>
+                                <li><i class="fas fa-volume-up text-primary me-1"></i> <strong>Phát âm:</strong> Bật tự động đọc hoặc nhấn ĐỌC KẾT QUẢ</li>
+                                <li><i class="fas fa-sun text-warning me-1"></i> <strong>Ánh sáng:</strong> Đảm bảo đủ sáng, không ngược sáng</li>
+                                <li><i class="fas fa-hand-paper text-success me-1"></i> <strong>Vị trí tay:</strong> Giữ tay ổn định trong khung hình</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capture/Upload Recognition Results -->
+                <div class="card border-0 shadow-lg">
+                    <div class="card-header text-white py-2 bg-info text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-camera-retro me-1"></i>ẢNH CHỤP / TẢI LÊN
+                        </h6>
+                    </div>
+                    <div class="card-body p-2 text-center">
+                        <div id="capture-prediction" class="fw-bold text-info mb-2" style="font-size: 2.5rem;">--</div>
+                        <div id="capture-confidence" class="text-muted mb-2" style="font-size: 0.85rem;">Dộ tin cậy: 0%</div>
+                        
+                        <div class="confidence-container mb-2">
+                            <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.7rem;">
+                                <span>0%</span>
+                                <span>TIN CẬY</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="confidence-meter bg-light rounded-pill">
+                                <div id="capture-confidence-bar" class="confidence-fill rounded-pill" style="width: 0%; height: 15px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="capture-status" class="text-muted" style="font-size: 0.85rem;">
+                            <i class="fas fa-image me-1"></i>CHƯA CÓ ẢNH
+                        </div>
+
+                        <!-- Capture/Upload Info -->
+                        <div class="mt-2 p-1 bg-light rounded">
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                <i class="fas fa-camera me-1"></i>
+                                <strong>Nguồn:</strong> <span id="image-source">Chưa xác định</span>
+                            </small>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                <i class="fas fa-star me-1"></i>
+                                Độ chính xác cao
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- ...existing code... (giữ nguyên phần scripts và styles) -->
+
+<!-- ...existing code... (giữ nguyên phần scripts và styles) -->
+
+{% block scripts %}
+<script src="{% static 'learning/js/camera_real.js' %}"></script>
+
+<!-- CSS -->
+<style>
+.confidence-meter {
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.confidence-fill {
+    height: 100%;
+    transition: width 0.3s ease, background 0.3s ease;
+    border-radius: 10px;
+}
+.pulse-animation {
+    animation: pulse 0.5s ease-in-out;
+}
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.camera-frame {
+    border: 3px solid #dee2e6;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f9fa;
+    position: relative;
+}
+.bg-gray-background {
+    background-color: #f8f9fa;
+}
+.recognition-mode.active {
+    font-weight: bold;
+}
+.captured-image-container {
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.captured-image-container img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-2 {
+        font-size: 2.5rem;
+    }
+    .lead {
+        font-size: 1.2rem;
+    }
+    .camera-frame video {
+        width: 100%;
+        height: auto;
+        max-width: 400px;
+    }
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+    .captured-image-container {
+        min-height: 150px;
+    }
+}
+
+/* Smooth transitions */
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+/* Confidence bar color transitions */
+.confidence-fill {
+    transition: all 0.5s ease;
+}
+
+/* Color schemes for different confidence levels */
+.confidence-fill.high {
+    background: linear-gradient(90deg, #198754, #20c997);
+}
+.confidence-fill.medium {
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+}
+.confidence-fill.low {
+    background: linear-gradient(90deg, #dc3545, #e83e8c);
+}
+.confidence-fill.none {
+    background: #e9ecef;
+}
+
+/* Capture section animations */
+#capture-section {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Upload section styles */
+.upload-area {
+    border: 3px dashed #dee2e6;
+    border-radius: 15px;
+    padding: 30px;
+    background: #ffffff;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area.drag-over {
+    border-color: #0d6efd;
+    background: #e7f1ff;
+    transform: scale(1.02);
+}
+
+.upload-placeholder {
+    text-align: center;
+    padding: 20px;
+}
+
+.upload-preview {
+    text-align: center;
+}
+
+.upload-area:hover {
+    border-color: #0d6efd;
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
